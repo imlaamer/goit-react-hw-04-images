@@ -28,6 +28,7 @@ function App() {
         const { hits, totalHits } = await ImageApi.getImages(q, page);
         if (hits.length === 0) {
           setIsEmpty(true);
+          setStatus(STATUSES.idle); //
           return;
         }
         setImages(prevImages =>
@@ -41,6 +42,7 @@ function App() {
       }
     };
     fetchImages();
+    //
   }, [q, page]);
 
   const onSubmit = query => {
@@ -112,7 +114,7 @@ function App() {
 
       {isEmpty && <EmptyGallery />}
 
-      {isShowImages && (
+      {isShowImages && !isModalOpen && (
         <button
           style={{
             position: 'fixed',
@@ -121,7 +123,7 @@ function App() {
             borderRadius: '50%',
             width: 60,
             height: 60,
-            zIndex: 3000,
+            zIndex: 800,
             backgroundColor: '#3f51b5',
             color: 'white',
           }}
