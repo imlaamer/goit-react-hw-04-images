@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { STATUSES } from 'utils/constants';
 import * as ImageApi from 'services/images-api';
 import Searchbar from './Searchbar/Searchbar';
@@ -9,116 +9,130 @@ import ErrorMessage from './ErrorMessage/ErrorMessage';
 import Loader from './Loader/Loader';
 import EmptyGallery from './EmptyGallery/EmptyGallery';
 
-class App extends Component {
-  state = {
-    status: STATUSES.idle,
-    q: '',
-    page: 1,
-    hits: null,
-    modalImage: null,
-    isModalOpen: false,
-    isLoadMore: false,
-    isEmpty: false,
-    error: null,
-  };
+function App() {
+  const [status, setStatus] = useState(STATUSES.idle);
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState(null);
+  const [modalImage, setModalImage] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoadMore, setIsLoadMore] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(false);
+  const [error, setError] = useState(null);
 
-  async componentDidUpdate(_, prevState) {
-    const { q, page } = this.state;
-
-    if (prevState.q !== q || prevState.page !== page) {
+  useEffect(() => {
+    if (q === '') return;
+    const fetchImages = async () => {
       try {
-        this.setState({ status: STATUSES.pending });
+        setStatus(STATUSES.pending);
         const { hits, totalHits } = await ImageApi.getImages(q, page);
         if (hits.length === 0) {
-          this.setState({ isEmpty: true });
+          setIsEmpty(true);
           return;
         }
-        this.setState(prevState => ({
-          hits: this.state.hits ? [...prevState.hits, ...hits] : [...hits],
-          isLoadMore: page < Math.ceil(totalHits / 12),
-        }));
+        setImages(prevImages =>
+          prevImages ? [...prevImages, ...hits] : [...hits]
+        ); //спочатку images = NULL тому перевірка
+        setIsLoadMore(page < Math.ceil(totalHits / 12));
+        setStatus(STATUSES.success);
       } catch (error) {
-        this.setState({ error: error.message, status: STATUSES.error });
-      } finally {
-        this.setState({ status: STATUSES.success });
+        setError(error);
+        setStatus(STATUSES.error);
       }
-    }
-  }
+    };
+    fetchImages();
+  }, [q, page]);
 
-  onSubmit = q => {
-    if (q.trim() === '') return alert('Please enter your search term');
-    if (q === this.state.q) return;
+  const onSubmit = query => {
+    if (query.trim() === '') return alert('Please enter your search term');
+    if (query === q) return;
+    setQ(query);
+    setPage(1);
+    setImages(null);
+    setIsLoadMore(false);
+    setIsEmpty(false);
+  };
 
-    this.setState({
-      q,
-      page: 1,
-      hits: null,
-      isLoadMore: false,
-      isEmpty: false,
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
     });
   };
 
-  handleLoadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const handleShowModalImage = imageId => {
+    const selectedImage = images.find(image => image.id === imageId);
+    setIsModalOpen(true);
+    setModalImage(selectedImage);
+    setStatus(STATUSES.pending);
   };
 
-  handleShowModalImage = imageId => {
-    const selectedImage = this.state.hits.find(image => image.id === imageId);
-    this.setState({
-      isModalOpen: true,
-      modalImage: selectedImage,
-      status: STATUSES.pending,
-    });
+  const handleCloseModalImage = () => {
+    setIsModalOpen(false);
+    setStatus(STATUSES.idle);
   };
 
-  handleCloseModalImage = () => {
-    this.setState({ isModalOpen: false, status: STATUSES.idle });
-  };
+  const isShowImages = STATUSES.success && Array.isArray(images);
 
-  render() {
-    const { hits, isLoadMore, error, isEmpty, isModalOpen } = this.state;
-    const showImages = STATUSES.success && Array.isArray(this.state.hits);
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridGap: 16,
+        paddingBottom: 24,
+      }}
+    >
+      <Searchbar onSubmit={onSubmit} />
 
-    return (
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr',
-          gridGap: 16,
-          paddingBottom: 24,
-        }}
-      >
-        <Searchbar onSubmit={this.onSubmit} />
+      {isShowImages && (
+        <ImageGallery
+          hits={images}
+          handleShowModalImage={handleShowModalImage}
+        />
+      )}
 
-        {showImages && (
-          <ImageGallery
-            hits={hits}
-            handleShowModalImage={this.handleShowModalImage}
-          />
-        )}
+      {isLoadMore && <Button onClick={handleLoadMore} />}
 
-        {isLoadMore && <Button onClick={this.handleLoadMore} />}
+      {isModalOpen && (
+        <Modal
+          hits={images}
+          handleCloseModalImage={handleCloseModalImage}
+          modalImage={modalImage}
+        />
+      )}
 
-        {isModalOpen && (
-          <Modal
-            hits={hits}
-            handleCloseModalImage={this.handleCloseModalImage}
-            modalImage={this.state.modalImage}
-          />
-        )}
+      {status === STATUSES.pending && <Loader isModalOpen={isModalOpen} />}
 
-        {this.state.status === STATUSES.pending && (
-          <Loader isModalOpen={this.state.isModalOpen} />
-        )}
+      {status === STATUSES.error && <ErrorMessage error={error.message} />}
 
-        {this.state.status === STATUSES.error && (
-          <ErrorMessage error={this.state.error} />
-        )}
+      {isEmpty && <EmptyGallery />}
 
-        {isEmpty && <EmptyGallery />}
-      </div>
-    );
-  }
+      {isShowImages && (
+        <button
+          style={{
+            position: 'fixed',
+            bottom: 20,
+            right: 30,
+            borderRadius: '50%',
+            width: 60,
+            height: 60,
+            zIndex: 3000,
+            backgroundColor: '#3f51b5',
+            color: 'white',
+          }}
+          type="button"
+          onClick={scrollToTop}
+        >
+          Top
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default App;

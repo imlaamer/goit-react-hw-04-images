@@ -1,4 +1,4 @@
-function EmptyGallery(props) {
+function EmptyGallery() {
   return (
     <div
       style={{

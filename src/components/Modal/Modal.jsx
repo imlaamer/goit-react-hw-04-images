@@ -1,42 +1,39 @@
+import { useEffect } from 'react';
 import css from './Modal.module.css';
 import disableScroll from 'disable-scroll';
-import React, { Component } from 'react';
 
-class Modal extends Component {
-  handleOverlayClick = e => {
+function Modal({ handleCloseModalImage, modalImage }) {
+  const handleOverlayClick = e => {
     if (e.target === e.currentTarget) {
-      this.props.handleCloseModalImage();
+      handleCloseModalImage();
     }
   };
 
-  handleKeyPress = e => {
+  const handleKeyPress = e => {
     if (e.code === 'Escape') {
-      this.props.handleCloseModalImage();
+      handleCloseModalImage();
     }
   };
 
-  componentDidMount() {
+  useEffect(() => {
     disableScroll.on();
-    window.addEventListener('keydown', this.handleKeyPress);
-  }
+    window.addEventListener('keydown', handleKeyPress);
+    return () => {
+      disableScroll.off();
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []); //handleKeyPress??
 
-  componentWillUnmount() {
-    disableScroll.off();
-    window.removeEventListener('keydown', this.handleKeyPress);
-  }
+  const { Overlay, Modal } = css;
+  const { largeImageURL, tags } = modalImage;
 
-  render() {
-    const { Overlay, Modal } = css;
-    const { largeImageURL, tags } = this.props.modalImage;
-
-    return (
-      <div className={Overlay} onClick={this.handleOverlayClick}>
-        <div className={Modal}>
-          <img src={largeImageURL} alt={tags} width="900" />
-        </div>
+  return (
+    <div className={Overlay} onClick={handleOverlayClick}>
+      <div className={Modal}>
+        <img src={largeImageURL} alt={tags} width="900" />
       </div>
-    );
-  }
+    </div>
+  );
 }
 
 export default Modal;
