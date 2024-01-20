@@ -62,8 +62,12 @@ function App() {
             galleryRef.current.firstElementChild.getBoundingClientRect().height;
           const topHeight =
             galleryRef.current.firstElementChild.getBoundingClientRect().top;
+
+          const imagesPerCollumn = window.innerHeight / imageHeight;
+          console.log(imagesPerCollumn);
+
           window.scrollTo({
-            top: imageHeight * 3 - topHeight, //
+            top: imageHeight * imagesPerCollumn - (30 + 16 * 2) - topHeight, //
             behavior: 'smooth',
           });
         }
