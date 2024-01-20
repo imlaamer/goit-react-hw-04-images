@@ -1,9 +1,9 @@
 import css from './ImageGallery.module.css';
 import ImageGalleryItem from 'components/ImageGalleryItem/ImageGalleryItem';
 
-function ImageGallery({ hits, handleShowModalImage }) {
+function ImageGallery({ hits, handleShowModalImage, galleryRef }) {
   return (
-    <ul className={css.ImageGallery}>
+    <ul className={css.ImageGallery} ref={galleryRef}>
       {hits?.map(({ id, webformatURL, tags }) => (
         <ImageGalleryItem
           key={id}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { STATUSES } from 'utils/constants';
 import * as ImageApi from 'services/images-api';
 import Searchbar from './Searchbar/Searchbar';
@@ -13,12 +13,13 @@ function App() {
   const [status, setStatus] = useState(STATUSES.idle);
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
-  const [images, setImages] = useState(null);
+  const [images, setImages] = useState([]);
   const [modalImage, setModalImage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoadMore, setIsLoadMore] = useState(false);
   const [isEmpty, setIsEmpty] = useState(false);
   const [error, setError] = useState(null);
+  const galleryRef = useRef(null);
 
   useEffect(() => {
     if (q === '') return;
@@ -28,12 +29,10 @@ function App() {
         const { hits, totalHits } = await ImageApi.getImages(q, page);
         if (hits.length === 0) {
           setIsEmpty(true);
-          setStatus(STATUSES.idle); //
+          setStatus(STATUSES.idle);
           return;
         }
-        setImages(prevImages =>
-          prevImages ? [...prevImages, ...hits] : [...hits]
-        ); //спочатку images = NULL тому перевірка
+        setImages(prevImages => [...prevImages, ...hits]);
         setIsLoadMore(page < Math.ceil(totalHits / 12));
         setStatus(STATUSES.success);
       } catch (error) {
@@ -42,7 +41,6 @@ function App() {
       }
     };
     fetchImages();
-    //
   }, [q, page]);
 
   const onSubmit = query => {
@@ -50,13 +48,28 @@ function App() {
     if (query === q) return;
     setQ(query);
     setPage(1);
-    setImages(null);
+    setImages([]);
     setIsLoadMore(false);
     setIsEmpty(false);
   };
 
   const handleLoadMore = () => {
     setPage(prevPage => prevPage + 1);
+    setTimeout(() => {
+      if (galleryRef.current) {
+        function scrollDownOnLoadMore() {
+          const imageHeight =
+            galleryRef.current.firstElementChild.getBoundingClientRect().height;
+          const topHeight =
+            galleryRef.current.firstElementChild.getBoundingClientRect().top;
+          window.scrollTo({
+            top: imageHeight * 3 - topHeight, //
+            behavior: 'smooth',
+          });
+        }
+        scrollDownOnLoadMore();
+      }
+    }, 500); //?
   };
 
   const scrollToTop = () => {
@@ -78,8 +91,6 @@ function App() {
     setStatus(STATUSES.idle);
   };
 
-  const isShowImages = STATUSES.success && Array.isArray(images);
-
   return (
     <div
       style={{
@@ -91,8 +102,9 @@ function App() {
     >
       <Searchbar onSubmit={onSubmit} />
 
-      {isShowImages && (
+      {images.length > 0 && (
         <ImageGallery
+          galleryRef={galleryRef}
           hits={images}
           handleShowModalImage={handleShowModalImage}
         />
@@ -114,7 +126,7 @@ function App() {
 
       {isEmpty && <EmptyGallery />}
 
-      {isShowImages && !isModalOpen && (
+      {images.length > 0 && !isModalOpen && (
         <button
           style={{
             position: 'fixed',

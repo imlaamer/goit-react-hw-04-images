@@ -9,20 +9,19 @@ function Modal({ handleCloseModalImage, modalImage }) {
     }
   };
 
-  const handleKeyPress = e => {
-    if (e.code === 'Escape') {
-      handleCloseModalImage();
-    }
-  };
-
   useEffect(() => {
+    const handleKeyPress = e => {
+      if (e.code === 'Escape') {
+        handleCloseModalImage();
+      }
+    };
     disableScroll.on();
     window.addEventListener('keydown', handleKeyPress);
     return () => {
       disableScroll.off();
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, []); //handleKeyPress??
+  }, [handleCloseModalImage]);
 
   const { Overlay, Modal } = css;
   const { largeImageURL, tags } = modalImage;
